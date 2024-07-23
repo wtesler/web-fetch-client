@@ -36,7 +36,7 @@ export default class WebFetchClient {
       retry: 0,
       rejectUnauthorized: true,
       useHttp: false,
-      verbose: true
+      verbose: false
     };
 
     // Options projected onto default options.

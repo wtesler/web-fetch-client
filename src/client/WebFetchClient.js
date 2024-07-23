@@ -8,22 +8,16 @@ export default class WebFetchClient {
    * @param body {any} Optional object or data to send. Works for all methods including `GET`.
    * @param headers {any} Optional object to send. May contain things like API Key, etc.
    * @param options {any} Optional properties object, may contain the following fields:
-   * `port`: Request on a port other than 443.
    * `response`: Number of ms to wait for the initial response. Defaults to 10000.
    * `deadline`: Number of ms to wait for the entire request. Defaults to 60000.
    * `retry`: Number of times to retry the request. Defaults to 0.
-   * `rejectUnauthorized`: Whether we should reject unauthorized responses. Defaults to true.
-   * `useHttp`: Whether we should use http instead of https. Defaults to false.
    * `verbose`: Whether to print the rejections as warnings. Defaults to true.
-   *
-   * @param abortSignal {AbortSignal} An optional abort signal which can be used to interrupt the request.
-   * @param onChunk {function(Buffer)} An optional function which receives callbacks with chunks as they stream in.
-   * If set, the overall response will not contain the data.
+   * @param fetch The fetch object to use. Defaults to browser built-in fetch.
    * @return {Promise<Object>} The resolved or rejected response.
    * If `ACCEPT` is application/json, the response will be parsed as JSON and a status code assigned to it.
    * Otherwise, a response object is created and the response is set to the `data` property.
    */
-  static async request(type, path, host, body = {}, headers = {}, options = {}, abortSignal = null, onChunk = null) {
+  static async request(type, path, host, body = {}, headers = {}, options = {}, fetch=fetch) {
     if (!body) {
       body = {};
     }
@@ -49,20 +43,10 @@ export default class WebFetchClient {
     options = Object.assign(defaultOptions, options);
 
     // Extract options.
-    const port = options.port;
     const responseTimeMs = options.response;
     const deadlineTimeMs = options.deadline;
     const retry = options.retry;
-    const rejectUnauthorized = options.rejectUnauthorized;
     const verbose = options.verbose;
-    const useHttp = options.useHttp;
-
-    const httpLib = useHttp ? require('http') : require('https');
-
-    const httpStr = useHttp ? 'http' : 'https';
-    if (host && host.startsWith(`${httpStr}://`)) {
-      host = host.replace(`${httpStr}://`, '');
-    }
 
     type = type.toUpperCase();
 
@@ -74,15 +58,21 @@ export default class WebFetchClient {
       headers['Accept'] = 'application/json'; // Common situation handled here.
     }
 
+    const requestOptions = {
+      method: type,
+      headers: headers
+    }
+
     if (type === 'POST' || type === 'PUT' || type === 'DELETE') {
       if (headers['Content-Type'].includes('application/json')) {
         body = JSON.stringify(body);
-        body = Buffer.from(body, 'utf-8');
       }
 
       if (!headers['Content-Length']) {
         headers['Content-Length'] = body.length;
       }
+
+      requestOptions.body = body;
     } else if (type === 'GET') {
       const keys = Object.keys(body);
       for (let i = 0; i < keys.length; i++) {
@@ -101,25 +91,6 @@ export default class WebFetchClient {
       }
     } else {
       throw new Error(`Unsupported type: ${type}`);
-    }
-
-    const requestOptions = {
-      hostname: host,
-      path: path,
-      method: type,
-      headers: headers
-    };
-
-    if (port) {
-      requestOptions.port = port;
-    }
-
-    if (abortSignal) {
-      requestOptions.signal = abortSignal;
-    }
-
-    if (process.env.NODE_ENV === 'development' || !rejectUnauthorized) {
-      requestOptions.rejectUnauthorized = false;
     }
 
     const logWarning = (str) => {
@@ -142,7 +113,7 @@ export default class WebFetchClient {
       let responseTimeout;
       let deadlineTimeout;
 
-      const TIMEOUT = 'Https Client Timeout';
+      const TIMEOUT = 'Web Fetch Client Timeout';
 
       /**
        * Resolves if timeout occurs while waiting for initial acknowledgement.
@@ -176,95 +147,60 @@ export default class WebFetchClient {
         }, deadlineTimeMs);
       });
 
-      const buffer = Buffer;
+      const responsePromise = new Promise(async(resolve) => {
+        try {
+          const response = await fetch(`${host}/${path}`, requestOptions);
 
-      const responsePromise = new Promise(resolve => {
-        const req = httpLib.request(requestOptions, res => {
-          const data = [];
+          const statusCode = response.statusCode;
 
-          const statusCode = res.statusCode;
+          if (didTimeout) {
+            resolve();
+          }
 
-          res.on('error', e => {
-            cancelResponseTimeout();
-            e.statusCode = statusCode;
-            logWarning(e);
-            resolve(e); // Network Error
-          });
-          res.on('data', chunk => {
-            cancelResponseTimeout();
-            if (onChunk) {
-              try {
-                onChunk(chunk);
-              } catch (e) {
-                logWarning(e);
-                resolve(e);
+          cancelResponseTimeout();
+          clearTimeout(deadlineTimeout);
+
+          let responseContent = null;
+
+          if (headers['Accept'] === 'application/json') {
+            try {
+              responseContent = await response.json();
+              if (!responseContent.statusCode) {
+                responseContent.statusCode = statusCode;
               }
+            } catch (e) {
+              // Everything is fine.
+            }
+          }
+
+          if (!responseContent) {
+            responseContent = {
+              data: await response.text(),
+              statusCode: statusCode
+            };
+          }
+
+          if (statusCode >= 400) {
+            logWarning(responseContent);
+            const serverError = new Error(`Received not OK status code with call to ${host}${path}`);
+            serverError.statusCode = statusCode;
+            if (typeof responseContent === 'string') {
+              serverError.message = `Received ${statusCode} code. Response treated as rejection. Full response: ${responseContent}`;
             } else {
-              data.push(chunk);
+              Object.assign(serverError, responseContent);
             }
-          });
-          res.on('end', () => {
-            if (didTimeout) {
-              resolve();
-              return;
-            }
-
-            cancelResponseTimeout();
-            clearTimeout(deadlineTimeout);
-
-            const responseStr = buffer.concat(data).toString();
-            let response;
-            if (headers['Accept'] === 'application/json') {
-              try {
-                response = JSON.parse(responseStr);
-                if (!response.statusCode) {
-                  response.statusCode = statusCode;
-                }
-              } catch (e) {
-                // Everything is fine.
-              }
-            }
-
-            if (!response) {
-              response = {
-                data: responseStr,
-                statusCode: statusCode
-              };
-            }
-
-            if (statusCode >= 400) {
-              logWarning(response);
-              let responseStr = response;
-              const serverError = new Error(`Received not OK status code with call to ${host}${path}`);
-              serverError.statusCode = statusCode;
-              if (typeof response === 'string') {
-                serverError.message = `Received ${statusCode} code. Response treated as rejection. Full response: ${responseStr}`;
-              } else {
-                Object.assign(serverError, response);
-              }
-              resolve(serverError);
-            } else {
-              // Success
-              didSucceed = true;
-              resolve(response);
-            }
-          });
-        });
-
-        if (abortSignal) {
-          abortSignal.addEventListener('abort', () => {
-            req.destroy();
-            const error = new Error('Aborted');
-            error.statusCode = 499;
-            resolve(error);
-          }, {once: true});
+            resolve(serverError);
+          } else {
+            // Success
+            didSucceed = true;
+            resolve(responseContent);
+          }
+        } catch (e) {
+          cancelResponseTimeout();
+          e.statusCode = 500;
+          logWarning(e);
+          resolve(e)
         }
-
-        if (type === 'POST' || type === 'PUT' || type === 'DELETE') {
-          req.write(body);
-        }
-
-        req.end();
       });
 
       const overallResponse = await Promise.any([responsePromise, Promise.any([responseTimeoutPromise, deadlineTimeoutPromise])]);

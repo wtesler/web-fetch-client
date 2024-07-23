@@ -12,12 +12,12 @@ export default class WebFetchClient {
    * `deadline`: Number of ms to wait for the entire request. Defaults to 60000.
    * `retry`: Number of times to retry the request. Defaults to 0.
    * `verbose`: Whether to print the rejections as warnings. Defaults to true.
-   * @param fetch The fetch object to use. Defaults to browser built-in fetch.
+   * @param fetchObj The fetch object to use. Defaults to browser built-in fetch.
    * @return {Promise<Object>} The resolved or rejected response.
    * If `ACCEPT` is application/json, the response will be parsed as JSON and a status code assigned to it.
    * Otherwise, a response object is created and the response is set to the `data` property.
    */
-  static async request(type, path, host, body = {}, headers = {}, options = {}, fetch=fetch) {
+  static async request(type, path, host, body = {}, headers = {}, options = {}, fetchObj=fetch) {
     if (!body) {
       body = {};
     }
@@ -149,9 +149,13 @@ export default class WebFetchClient {
 
       const responsePromise = new Promise(async(resolve) => {
         try {
-          const response = await fetch(`${host}/${path}`, requestOptions);
+          const response = await fetchObj(`${host}/${path}`, requestOptions);
 
-          const statusCode = response.statusCode;
+          if (verbose) {
+            console.log(response);
+          }
+
+          const statusCode = response.status;
 
           if (didTimeout) {
             resolve();
@@ -197,7 +201,6 @@ export default class WebFetchClient {
           }
         } catch (e) {
           cancelResponseTimeout();
-          e.statusCode = 500;
           logWarning(e);
           resolve(e)
         }

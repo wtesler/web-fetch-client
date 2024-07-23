@@ -1,3 +1,2 @@
-import WebFetchClient from './client/WebFetchClient';
-
-export const request = WebFetchClient.request;
+import WebFetchClient from './client/WebFetchClient.js';
+export default WebFetchClient.request;

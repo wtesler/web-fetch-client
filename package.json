@@ -1,0 +1,48 @@
+{
+  "name": "web-fetch-client",
+  "version": "0.0.1",
+  "description": "Simple REST client for web `fetch` module. Adds retries and timeout support to `fetch` module.",
+  "author": "Will Tesler",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wtesler/web-fetch-client.git"
+  },
+  "homepage": "https://github.com/wtesler/web-fetch-client",
+  "keywords": [
+    "fetch",
+    "client",
+    "rest"
+  ],
+  "scripts": {
+    "build": "npm run clean && babel src --out-dir dist --copy-files",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+  },
+  "peerDependencies": {
+  },
+  "devDependencies": {
+    "@babel/cli": "7.24.8",
+    "@babel/core": "7.24.9",
+    "eslint": "8.20.0",
+    "eslint-plugin-promise": "6.0.0",
+    "prettier": "2.7.1",
+    "rimraf": "3.0.2"
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "files": [
+    "dist"
+  ],
+  "babel": {
+    "presets": [
+      "@babel/preset-react"
+    ],
+    "plugins": []
+  },
+  "browserslist": [
+    ">0.25%",
+    "not dead"
+  ]
+}

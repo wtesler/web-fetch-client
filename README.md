@@ -20,12 +20,13 @@ No dependencies.
 ### Example:
 
 ```
-const request = require('web-fetch-client');
+import request from 'web-fetch-client';
+
 const body = {};
 const headers = {};
 const options = {};
 
-const response = await request('POST', '/v1/endpoint', 'my-host.com', body, headers, options);
+const response = await request('POST', '/v1/endpoint', 'https://my-host.com', body, headers, options);
 ```
 
 ### Options:

@@ -4,7 +4,7 @@ export default class WebFetchClient {
    *
    * @param type {String} REST method to use. For example 'GET', 'POST', 'PUT', 'DELETE'.
    * @param path {String} Endpoint path. For example '/api/v1/users'.
-   * @param host {String} Host to call. Example: api.example.com
+   * @param host {String} Host to call. Example: https://api.example.com
    * @param body {any} Optional object or data to send. Works for all methods including `GET`.
    * @param headers {any} Optional object to send. May contain things like API Key, etc.
    * @param options {any} Optional properties object, may contain the following fields:
@@ -14,7 +14,7 @@ export default class WebFetchClient {
    * `verbose`: Whether to print the rejections as warnings. Defaults to true.
    * @param fetchObj The fetch object to use. Defaults to browser built-in fetch.
    * @return {Promise<Object>} The resolved or rejected response.
-   * If `ACCEPT` is application/json, the response will be parsed as JSON and a status code assigned to it.
+   * If `Accept` header is application/json, the response will be parsed as JSON and a status code assigned to it.
    * Otherwise, a response object is created and the response is set to the `data` property.
    */
   static async request(type, path, host, body = {}, headers = {}, options = {}, fetchObj=fetch) {

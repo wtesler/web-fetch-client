@@ -149,7 +149,7 @@ export default class WebFetchClient {
 
       const responsePromise = new Promise(async(resolve) => {
         try {
-          const response = await fetchObj(`${host}/${path}`, requestOptions);
+          const response = await fetchObj(`${host}${path}`, requestOptions);
 
           if (verbose) {
             console.log(response);

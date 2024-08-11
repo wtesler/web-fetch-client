@@ -66,12 +66,8 @@ export default class WebFetchClient {
     if (type === 'POST' || type === 'PUT' || type === 'DELETE') {
       if (headers['Content-Type'].includes('application/json')) {
         body = JSON.stringify(body);
+        body = new TextEncoder().encode(body);
       }
-
-      if (!headers['Content-Length']) {
-        headers['Content-Length'] = body.length;
-      }
-
       requestOptions.body = body;
     } else if (type === 'GET') {
       const keys = Object.keys(body);

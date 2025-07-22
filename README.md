@@ -29,6 +29,22 @@ const options = {};
 const response = await request('POST', '/v1/endpoint', 'https://my-host.com', body, headers, options);
 ```
 
+### TypeScript Example:
+
+```ts
+import request, { Options, Headers, Response } from 'web-fetch-client';
+
+interface ApiResponse {
+  foo: string;
+}
+
+const options: Options = { retry: 1 };
+
+const response = await request<ApiResponse>('GET', '/foo', 'https://api.example.com', {}, {}, options);
+
+console.log(response.foo, response.statusCode);
+```
+
 ### Options:
 
     retry: number of retries, default 0

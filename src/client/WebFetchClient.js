@@ -5,7 +5,7 @@ export default class WebFetchClient {
    * @param type {String} REST method to use. For example 'GET', 'POST', 'PUT', 'DELETE'.
    * @param path {String} Endpoint path. For example '/api/v1/users'.
    * @param host {String} Host to call. Example: https://api.example.com
-   * @param body {any} Optional object or data to send. Works for all methods including `GET`.
+   * @param body {object | FormData} Optional object or data to send. Works for all methods including `GET`.
    * @param headers {any} Optional object to send. May contain things like API Key, etc.
    * @param options {any} Optional properties object, may contain the following fields:
    * `response`: Number of ms to wait for the initial response. Defaults to 10000.
@@ -64,12 +64,21 @@ export default class WebFetchClient {
     }
 
     if (type === 'POST' || type === 'PUT' || type === 'DELETE') {
+      let serializedBody;
       if (headers['Content-Type'].includes('application/json')) {
-        body = JSON.stringify(body);
-        body = new TextEncoder().encode(body);
+        if (body instanceof FormData) {
+          body = WebFetchClient._formDataToObject(body);
+        }
+        const stringBody = JSON.stringify(body);
+        serializedBody = new TextEncoder().encode(stringBody);
+      } else {
+        serializedBody = body;
       }
-      requestOptions.body = body;
+      requestOptions.body = serializedBody;
     } else if (type === 'GET') {
+      if (body instanceof FormData) {
+        body = WebFetchClient._formDataToObject(body);
+      }
       const keys = Object.keys(body);
       for (let i = 0; i < keys.length; i++) {
         const key = keys[i];
@@ -233,5 +242,17 @@ export default class WebFetchClient {
       // Response was error or timeout. Trying again.
       numRetries++;
     }
+  }
+
+  static _formDataToObject(formData) {
+    const obj = {};
+    for (const [key, value] of formData.entries()) {
+      if (typeof value === 'string') {
+        obj[key] = value;
+      } else {
+        throw new Error('Expected all form data values to be strings when Content-Type is application/json');
+      }
+    }
+    return obj;
   }
 };

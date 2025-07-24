@@ -44,7 +44,7 @@ export default class WebFetchClient {
     type: string,
     path: string,
     host: string,
-    body?: any,
+    body?: object | FormData,
     headers?: Headers,
     options?: Options,
     fetchObj?: typeof fetch

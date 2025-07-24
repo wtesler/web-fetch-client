@@ -53,3 +53,10 @@ console.log(response.foo, response.statusCode);
     verbose: should log warnings, default true
 
 All options are optional.
+
+### Building / Publishing
+
+1. Make changes
+2. Update version in package.json
+3. Run `npm build`
+4. Run `npm publish`

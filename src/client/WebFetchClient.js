@@ -68,6 +68,8 @@ export default class WebFetchClient {
       if (headers['Content-Type'].includes('application/json')) {
         if (body instanceof FormData) {
           body = WebFetchClient._formDataToObject(body);
+        } else if (body instanceof URLSearchParams) {
+          body = Object.fromEntries(body)
         }
         const stringBody = JSON.stringify(body);
         serializedBody = new TextEncoder().encode(stringBody);
@@ -78,6 +80,8 @@ export default class WebFetchClient {
     } else if (type === 'GET') {
       if (body instanceof FormData) {
         body = WebFetchClient._formDataToObject(body);
+      } else if (body instanceof URLSearchParams) {
+        body = Object.fromEntries(body)
       }
       const keys = Object.keys(body);
       for (let i = 0; i < keys.length; i++) {

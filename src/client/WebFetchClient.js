@@ -176,13 +176,9 @@ export default class WebFetchClient {
           let responseContent = null;
 
           if (headers['Accept'] === 'application/json') {
-            try {
-              responseContent = await response.json();
-              if (!responseContent.statusCode) {
-                responseContent.statusCode = statusCode;
-              }
-            } catch (e) {
-              // Everything is fine.
+            responseContent = await response.json();
+            if (responseContent && !responseContent.statusCode) {
+              responseContent.statusCode = statusCode;
             }
           }
 
